@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 use Illuminate\Support\Str;
 
-use App\Http\Requests\StoreCategoryRequest;
-use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 
 class CategoryController extends Controller
@@ -36,9 +35,17 @@ class CategoryController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreCategoryRequest $request)
+    public function store(Request $request)
     {
         try {
+            $validator = Validator($request->all(), [
+                'name' => ['required', 'string', 'max:255'],
+            ]);
+
+            if($validator->fails()){
+                return response()->json(['message' => $validator->errors()]);
+            }
+
             $token = request()->user()->currentAccessToken();
 
             Category::create([
@@ -62,9 +69,17 @@ class CategoryController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateCategoryRequest $request, Category $category)
+    public function update(Request $request, Category $category)
     {
         try {
+            $validator = Validator($request->all(), [
+                'name' => ['required', 'string', 'max:255'],
+            ]);
+
+            if($validator->fails()){
+                return response()->json(['message' => $validator->errors()]);
+            }
+
             $category->update([
                 'name' => $request->name,
                 'slug' => Str::slug($request->name)

@@ -4,9 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
-use App\Http\Requests\StoreRealizationRequest;
-use App\Http\Requests\UpdateRealizationRequest;
 use App\Models\Realization;
 use Illuminate\Support\Facades\DB;
 
@@ -36,9 +35,18 @@ class RealizationController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreRealizationRequest $request)
+    public function store(Request $request)
     {
         try {
+            $validator = Validator($request->all(), [
+                'description' => ['required', 'string'],
+                'attachments.*.file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048']
+            ]);
+
+            if($validator->fails()){
+                return response()->json(['message' => $validator->errors()]);
+            }
+
             $token = request()->user()->currentAccessToken();
 
             DB::transaction(function() use ($request, $token){
@@ -92,13 +100,20 @@ class RealizationController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateRealizationRequest $request, Realization $realization)
+    public function update(Request $request, Realization $realization)
     {
         try {
-            $token = request()->user()->currentAccessToken();
+            $validator = Validator($request->all(), [
+                'description' => ['required', 'string'],
+                'attachments.*.file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048']
+            ]);
 
-            DB::transaction(function() use ($request, $realization, $token){
-                $realization->where('user_id', $token->tokenable->id)->update([
+            if($validator->fails()){
+                return response()->json(['message' => $validator->errors()]);
+            }
+
+            DB::transaction(function() use ($request, $realization){
+                $realization->update([
                     'plan_id' => $request->plan_id,
                     'plan_detail_id' => $request->plan_detail_id,
                     'description' => $request->description,
@@ -139,17 +154,20 @@ class RealizationController extends Controller
     public function destroy(Realization $realization)
     {
         try {
-            $token = request()->user()->currentAccessToken();
-
-            DB::transaction(function () use ($realization, $token) {
+            DB::transaction(function () use ($realization) {
                 if ($realization->attachments()->count() > 0) {
                     foreach ($realization->attachments as $image) {
                         Storage::disk('public')->delete('attachments/'.basename($image->image));
                         $image->delete();
                     }
                 }
-                $realization->where('user_id', $token->tokenable->id)->delete();
+                $realization->delete();
             });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Realization deleted successfully'
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

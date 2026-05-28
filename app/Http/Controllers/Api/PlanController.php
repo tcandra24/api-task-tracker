@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-
-use App\Http\Requests\StorePlanRequest;
-use App\Http\Requests\UpdatePlanRequest;
-use App\Models\Plan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+
+use App\Models\Plan;
+use App\Models\PlanDetail;
 
 class PlanController extends Controller
 {
@@ -35,9 +35,21 @@ class PlanController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePlanRequest $request)
+    public function store(Request $request)
     {
         try {
+            $validator = Validator($request->all(), [
+                'name' => ['required', 'string', 'max:255'],
+                'date_start' => ['required', 'date'],
+                'date_end' => ['required', 'date'],
+                'details' => ['required', 'array'],
+                'details.*.name' => ['required', 'string']
+            ]);
+
+            if($validator->fails()){
+                return response()->json(['message' => $validator->errors()]);
+            }
+
             $token = request()->user()->currentAccessToken();
 
             DB::transaction(function() use ($request, $token){
@@ -86,36 +98,32 @@ class PlanController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdatePlanRequest $request, Plan $plan)
+    public function update(Request $request, Plan $plan)
     {
         try {
-            $token = request()->user()->currentAccessToken();
+            $validator = Validator($request->all(), [
+                'name' => ['required', 'string', 'max:255'],
+                'date_start' => ['required', 'date'],
+                'date_end' => ['required', 'date'],
+                'details' => ['required', 'array'],
+                'details.*.name' => ['required', 'string']
+            ]);
 
-            DB::transaction(function() use ($request, $plan, $token){
-                $plan->where('user_id', $token->tokenable->id)->update([
+            if($validator->fails()){
+                return response()->json(['message' => $validator->errors()]);
+            }
+
+            DB::transaction(function() use ($request, $plan){
+                $plan->update([
                     'name' => $request->name,
                     'date_start' => $request->date_start,
                     'date_end' => $request->date_end
                 ]);
 
-                // Check if data have new detail plan not in the database
-                $existingDetail = $plan->details()->pluck('id')->toArray();
-                $newDetails = collect($request->details)->whereNotIn('id', $existingDetail);
+                $incomingIds = collect($request->details)->pluck('id')->filter();
+                PlanDetail::whereNotIn('id', $incomingIds)->delete();
 
-                // Check if data remove in details & still exist on database
-                $requestDetails = collect($request->details)->pluck('id')->toArray();
-                $removedDetails = $plan->details()->whereNotIn('id', $requestDetails);
-
-                // Only insert new data or update old data & delete data not exist in details array for data in the table plans
-                $newDetails->each(function($detail) use ($plan) {
-                    $plan->details()->create([
-                        'name' => $detail['name']
-                    ]);
-                });
-
-                $removedDetails->each(function($detail) use ($plan) {
-                    $plan->details()->where('id', $detail['id'])->delete();
-                });
+                $plan->details()->upsert($request->details, ['id'], ['name']);
             });
 
             return response()->json([
@@ -136,9 +144,7 @@ class PlanController extends Controller
     public function destroy(Plan $plan)
     {
         try {
-            $token = request()->user()->currentAccessToken();
-
-            $plan->where('user_id', $token->tokenable->id)->delete();
+            $plan->delete();
 
             return response()->json([
                 'success' => true,
