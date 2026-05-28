@@ -81,7 +81,9 @@ class PlanController extends Controller
     public function show(Plan $plan)
     {
         try {
-            $plan->load(['details']);
+            $plan->load(['details' => function($query) {
+                $query->withSum('realizations', 'progress');
+            }]);
 
             return response()->json([
                 'success' => true,

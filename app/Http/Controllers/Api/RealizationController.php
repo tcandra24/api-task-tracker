@@ -39,6 +39,7 @@ class RealizationController extends Controller
     {
         try {
             $validator = Validator($request->all(), [
+                'progress' => ['nullable', 'integer', 'min:0', 'max:100'],
                 'description' => ['required', 'string'],
                 'attachments.*.file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048']
             ]);
@@ -54,7 +55,8 @@ class RealizationController extends Controller
                     'plan_id' => $request->plan_id,
                     'plan_detail_id' => $request->plan_detail_id,
                     'description' => $request->description,
-                    'user_id' => $token->tokenable->id
+                    'user_id' => $token->tokenable->id,
+                    'progress' => $request->plan_id && $request->plan_detail_id ? $request->progress : 100
                 ]);
 
                 foreach($request->file('attachments', []) as $image) {
@@ -104,6 +106,7 @@ class RealizationController extends Controller
     {
         try {
             $validator = Validator($request->all(), [
+                'progress' => ['nullable', 'integer', 'min:0', 'max:100'],
                 'description' => ['required', 'string'],
                 'attachments.*.file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048']
             ]);
@@ -117,6 +120,7 @@ class RealizationController extends Controller
                     'plan_id' => $request->plan_id,
                     'plan_detail_id' => $request->plan_detail_id,
                     'description' => $request->description,
+                    'progress' => $request->plan_id && $request->plan_detail_id ? $request->progress : 100
                 ]);
 
                 if($request->file('attachments') && count($request->file('attachments')) > 0) {
