@@ -22,6 +22,7 @@ class RealizationController extends Controller
             $realizations = Realization::with(['plan', 'planDetail'])->where('user_id', $token->tokenable->id)->get();
             return response()->json([
                 'success' => true,
+                'message' => 'Realizations retrieved successfully',
                 'data' => $realizations
             ]);
         } catch (\Exception $e) {
@@ -45,7 +46,7 @@ class RealizationController extends Controller
             ]);
 
             if($validator->fails()){
-                return response()->json(['message' => $validator->errors()]);
+                throw new \Exception($validator->errors());
             }
 
             $token = request()->user()->currentAccessToken();
@@ -112,7 +113,7 @@ class RealizationController extends Controller
             ]);
 
             if($validator->fails()){
-                return response()->json(['message' => $validator->errors()]);
+                throw new \Exception($validator->errors());
             }
 
             DB::transaction(function() use ($request, $realization){

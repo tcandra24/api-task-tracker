@@ -14,59 +14,90 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $validator = Validator($request->all(), [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:6'],
-        ]);
+        try {
+            $validator = Validator($request->all(), [
+                'name' => ['required', 'string', 'max:255'],
+                'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+                'password' => ['required', 'string', 'min:6'],
+            ]);
 
-        if($validator->fails()){
-            return response()->json(['message' => $validator->errors()]);
+            if($validator->fails()){
+                throw new \Exception($validator->errors());
+            }
+
+            User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => bcrypt($request->password),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User registered successfully'
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => bcrypt($request->password),
-        ]);
-
-        return response()->json(['message' => 'User registered successfully'], 201);
     }
 
     public function login(Request $request)
     {
-        $validator = Validator($request->all(), [
-            'email' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'string', 'min:6'],
-        ]);
+        try {
+            $validator = Validator($request->all(), [
+                'email' => ['required', 'string', 'max:255'],
+                'password' => ['required', 'string', 'min:6'],
+            ]);
 
-        if($validator->fails()){
-            return response()->json(['message' => $validator->errors()]);
+            if($validator->fails()){
+                throw new \Exception($validator->errors());
+            }
+
+            $user = User::where('email', $request->email)->first();
+
+            if (!$user || !Hash::check($request->password, $user->password)){
+                throw new \Exception('Password or Username is Wrong');
+            }
+
+            $token = $user->createToken('user_token')->plainTextToken;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User login successful',
+                'data' => [
+                    'token' => $token,
+                    'token_type' => 'Bearer',
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                    ]
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)){
-            return response()->json(['message' => 'Password or Username is Wrong'], 401);
-        }
-
-        $token = $user->createToken('user_token')->plainTextToken;
-
-        return response()->json([
-            'token' => $token,
-            'token_type' => 'Bearer',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ]
-        ]);
     }
 
     public function logout(Request $request)
     {
-        auth()->user()->currentAccessToken()->delete();
+        try {
+            auth()->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Logged out successfully']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Logged out successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }

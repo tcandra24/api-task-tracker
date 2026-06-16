@@ -22,6 +22,7 @@ class CategoryController extends Controller
             $categories = Category::where('user_id', $token->tokenable->id)->get();
             return response()->json([
                 'success' => true,
+                'message' => 'Categories retrieved successfully',
                 'data' => $categories
             ]);
         } catch (\Exception $e) {
@@ -43,7 +44,7 @@ class CategoryController extends Controller
             ]);
 
             if($validator->fails()){
-                return response()->json(['message' => $validator->errors()]);
+                throw new \Exception($validator->errors());
             }
 
             $token = request()->user()->currentAccessToken();
@@ -77,7 +78,7 @@ class CategoryController extends Controller
             ]);
 
             if($validator->fails()){
-                return response()->json(['message' => $validator->errors()]);
+                throw new \Exception($validator->errors());
             }
 
             $category->update([

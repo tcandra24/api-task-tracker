@@ -22,6 +22,7 @@ class PlanController extends Controller
             $plans = Plan::where('user_id', $token->tokenable->id)->get();
             return response()->json([
                 'success' => true,
+                'message' => 'Plans retrieved successfully',
                 'data' => $plans
             ]);
         } catch (\Exception $e) {
@@ -47,7 +48,7 @@ class PlanController extends Controller
             ]);
 
             if($validator->fails()){
-                return response()->json(['message' => $validator->errors()]);
+                throw new \Exception($validator->errors());
             }
 
             $token = request()->user()->currentAccessToken();
@@ -112,7 +113,7 @@ class PlanController extends Controller
             ]);
 
             if($validator->fails()){
-                return response()->json(['message' => $validator->errors()]);
+                throw new \Exception($validator->errors());
             }
 
             DB::transaction(function() use ($request, $plan){
