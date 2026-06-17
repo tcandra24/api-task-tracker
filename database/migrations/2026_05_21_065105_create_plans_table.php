@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('plans', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->timestamp('date_start');
-            $table->timestamp('date_end');
+            $table->timestamp('date_start')->nullable();
+            $table->timestamp('date_end')->nullable();
             $table->unsignedBigInteger('user_id');
             $table->timestamps();
 
